@@ -1,0 +1,26 @@
+Reflections
+Copyright (c) 2025 Mentra Community
+
+This project is licensed under the MIT License. See LICENSE for the full text.
+
+Portions of this software are derived from the MentraOS Camera Example App
+template, originally published by Mentra Community at:
+https://github.com/Mentra-Community/MentraOS-Camera-Example-App
+
+The MentraOS template provided the initial Bun/TypeScript app-server scaffold,
+MentraOS SDK integration patterns, and camera-session wiring that Reflections
+extends with live streaming, perception, memory, and proactivity.
+
+Reflections also vendors and depends on third-party software, including but
+not limited to:
+
+  - LR-ASD (Lightweight and Robust Active Speaker Detection)
+    https://github.com/Junhua-Liao/LR-ASD — MIT License.
+    Vendored under packages/third_party/lr_asd/ for active speaker detection.
+
+  - InsightFace MobileFaceNet (ArcFace, w600k_mbf) for face embedding.
+  - OpenCV YuNet (Apache 2.0) for face detection.
+  - MediaMTX (MIT) for WHIP/WHEP streaming.
+  - Qwen3-1.7B base model (Apache 2.0) and the Reflections LoRA adapter.
+
+See THIRD_PARTY_NOTICES.md for the full attribution list and license terms.

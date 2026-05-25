@@ -1,0 +1,41 @@
+.env
+node_modules/
+.DS_Store
+*.log
+proactivity_prompts.jsonl
+proactivity_decisions.log
+transcript_updates.log
+memory.md
+suggestions/
+suggestions.md
+# VSCode
+.vscode/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+reflections.egg-info/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+# Local recordings
+recordings/
+# MediaMTX binaries (platform-specific; download per OS)
+mediamtx/mediamtx
+mediamtx/mediamtx.exe
+# Claude Code session data
+.claude/
+# Cursor session data
+.cursor/
+# Face identity gallery (built up during usage, private)
+models/face_gallery.npz
+models/face_gallery.json
+# Downloaded ONNX weights (YuNet, MobileFaceNet — fetched per README)
+models/*.onnx

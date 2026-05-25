@@ -1,0 +1,45 @@
+# Mirror .gitignore so `docker build` doesn't ship secrets, runtime state,
+# or developer caches into the build context.
+
+# Secrets and runtime state
+.env
+memory.md
+*.log
+proactivity_prompts.jsonl
+proactivity_decisions.log
+transcript_updates.log
+suggestions/
+suggestions.md
+
+# Local face identity gallery (biometric data)
+models/face_gallery.npz
+models/face_gallery.json
+
+# Models / binaries downloaded at runtime
+mediamtx/mediamtx
+mediamtx/mediamtx.exe
+recordings/
+
+# Tooling caches
+node_modules/
+__pycache__/
+*.pyc
+*.egg-info/
+reflections.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+venv/
+.venv/
+
+# Editor / agent session data
+.vscode/
+.claude/
+.cursor/
+.DS_Store
+
+# Git metadata isn't needed in the build context
+.git/
+.github/

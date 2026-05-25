@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Actionability Classifier · Test UI</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    background: #0f1115;
+    color: #e8e8e8;
+    margin: 0;
+    padding: 24px;
+    line-height: 1.45;
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 600;
+  }
+  .sub { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  section {
+    background: #1a1d24;
+    border: 1px solid #2a2e38;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #999;
+    margin-bottom: 6px;
+  }
+  textarea, input {
+    width: 100%;
+    background: #0f1115;
+    border: 1px solid #2a2e38;
+    border-radius: 4px;
+    padding: 8px;
+    color: #e8e8e8;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  textarea { resize: vertical; min-height: 120px; font-size: 12px; line-height: 1.5; }
+  textarea#transcript { min-height: 220px; }
+  textarea#memory { min-height: 180px; }
+  textarea#entities { min-height: 80px; }
+
+  .tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    min-height: 28px;
+  }
+  .chip {
+    background: #2a2e38;
+    color: #e8e8e8;
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  .chip button {
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .chip button:hover { color: #f87171; }
+  .add-tool { display: flex; gap: 6px; }
+  .add-tool input { flex: 1; }
+
+  button.primary {
+    background: #4a8fff;
+    border: 1px solid #4a8fff;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #5a9fff; }
+  button.primary:disabled {
+    background: #444;
+    border-color: #444;
+    cursor: not-allowed;
+    color: #888;
+  }
+  button.secondary {
+    background: #2a2e38;
+    border: 1px solid #3a3e48;
+    color: #e8e8e8;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  button.secondary:hover { background: #353a44; }
+
+  #result { margin-top: 16px; }
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .verdict {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 200px;
+  }
+  .verdict.actionable { color: #4ade80; }
+  .verdict.not-actionable { color: #f87171; }
+  .bar {
+    flex: 1;
+    min-width: 200px;
+    height: 18px;
+    background: #2a2e38;
+    border-radius: 9px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4a8fff, #60c5ff);
+    transition: width 0.25s ease-out;
+  }
+  .bar-threshold {
+    position: absolute;
+    left: 45%;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: #aaa;
+  }
+  .p-num {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    min-width: 110px;
+    text-align: right;
+  }
+  .timings {
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: #888;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .timings .num { color: #e8e8e8; font-weight: 600; font-family: ui-monospace, monospace; }
+  pre.reasoning {
+    background: #0f1115;
+    border: 1px solid #2a2e38;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #cfd8dc;
+  }
+  .error {
+    background: #2d1518;
+    border: 1px solid #5a2329;
+    color: #fca5a5;
+    padding: 12px;
+    border-radius: 4px;
+    margin-top: 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+  small.hint { color: #777; display: block; margin-top: 4px; font-size: 11px; }
+  small.hint code { background: #2a2e38; padding: 1px 4px; border-radius: 3px; }
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Actionability Classifier · Test UI</h1>
+<div class="sub">Qwen 3 1.7B + LoRA · threshold 0.45 · last line of transcript = target sentence</div>
+
+<div class="grid">
+  <section>
+    <label>Transcript</label>
+    <textarea id="transcript" placeholder="Speaker: text&#10;One turn per line. Last line is the target sentence being classified."></textarea>
+    <small class="hint">Format: <code>Speaker: text</code> or <code>Speaker | text</code>. Brackets around speaker names are OK (matches <code>transcript_updates.log</code>). Last line = target.</small>
+  </section>
+
+  <section>
+    <label>Memory</label>
+    <textarea id="memory" placeholder="Paste memory.md content, or leave blank."></textarea>
+    <small class="hint">Anything goes — full markdown, plain notes, multiple sections.</small>
+  </section>
+
+  <section>
+    <label>Tools available</label>
+    <div class="tools" id="toolChips"></div>
+    <div class="add-tool">
+      <input id="newTool" placeholder="add tool name and press Enter">
+      <button class="secondary" id="addToolBtn">Add</button>
+    </div>
+    <small class="hint">Pre-loaded with the standard set. × removes a tool. Add custom names if you want.</small>
+  </section>
+
+  <section>
+    <label>Entity list (optional)</label>
+    <textarea id="entities" placeholder="Name | relationship | fact1; fact2&#10;Sam | friend | severe nut allergy; prefers Thai without peanuts"></textarea>
+    <small class="hint">One per line, pipe-separated: <code>name | relationship | fact1; fact2; …</code>. Skipped if empty.</small>
+  </section>
+</div>
+
+<div class="toolbar">
+  <button class="primary" id="sendBtn">Send</button>
+  <button class="secondary" id="resetBtn">Load README example</button>
+  <button class="secondary" id="clearBtn">Clear</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+const VALID_TOOLS = [
+  "send_message", "create_reminder", "google_search",
+  "google_maps_find_places", "google_maps_find_nearest_place",
+  "google_maps_get_place_details", "google_calendar_list_events",
+  "google_calendar_create_event", "google_calendar_check_availability",
+];
+
+let tools = [...VALID_TOOLS];
+
+function renderTools() {
+  const c = document.getElementById("toolChips");
+  c.innerHTML = "";
+  tools.forEach((t, i) => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = t;
+    const btn = document.createElement("button");
+    btn.textContent = "×";
+    btn.title = "remove";
+    btn.onclick = () => { tools.splice(i, 1); renderTools(); };
+    chip.appendChild(btn);
+    c.appendChild(chip);
+  });
+}
+
+document.getElementById("addToolBtn").onclick = () => {
+  const inp = document.getElementById("newTool");
+  const v = inp.value.trim();
+  if (v && !tools.includes(v)) tools.push(v);
+  inp.value = "";
+  renderTools();
+};
+document.getElementById("newTool").addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    document.getElementById("addToolBtn").click();
+  }
+});
+
+function parseEntities(s) {
+  return s.trim().split("\n").map(line => {
+    const parts = line.split("|").map(p => p.trim());
+    if (parts.length < 2 || !parts[0]) return null;
+    const [name, relationship, factsRaw] = parts;
+    const facts = (factsRaw || "").split(";").map(f => f.trim()).filter(Boolean);
+    return { name, relationship: relationship || "unknown", facts };
+  }).filter(Boolean);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+function renderResult(data, totalMs) {
+  const el = document.getElementById("result");
+  if (data.error) {
+    el.innerHTML = `<div class="error">Error: ${escapeHtml(data.error)}</div>`;
+    return;
+  }
+  const pPct = (data.p * 100).toFixed(1);
+  const verdictClass = data.label === 1 ? "actionable" : "not-actionable";
+  const verdictText = data.label === 1 ? "🟢 ACTIONABLE → would escalate" : "🔴 NOT ACTIONABLE → drop";
+  const networkMs = totalMs - data.inference_ms;
+  el.innerHTML = `
+    <section>
+      <div class="result-header">
+        <div class="verdict ${verdictClass}">${verdictText}</div>
+        <div class="bar">
+          <div class="bar-fill" style="width: ${pPct}%"></div>
+          <div class="bar-threshold" title="threshold 0.45"></div>
+        </div>
+        <div class="p-num">P = ${data.p.toFixed(4)}</div>
+      </div>
+      <div class="timings">
+        <span>inference: <span class="num">${data.inference_ms.toFixed(0)} ms</span></span>
+        <span>network: <span class="num">${networkMs.toFixed(0)} ms</span></span>
+        <span>total roundtrip: <span class="num">${totalMs.toFixed(0)} ms</span></span>
+        <span>turns: <span class="num">${data.turns}</span></span>
+      </div>
+      ${data.reasoning ? `<pre class="reasoning">${escapeHtml(data.reasoning)}</pre>` : ""}
+    </section>
+  `;
+}
+
+document.getElementById("sendBtn").onclick = async () => {
+  const btn = document.getElementById("sendBtn");
+  btn.disabled = true;
+  btn.textContent = "Classifying…";
+  const t0 = performance.now();
+  try {
+    const payload = {
+      transcript: document.getElementById("transcript").value,
+      memory: document.getElementById("memory").value,
+      tools: tools,
+      entity_list: parseEntities(document.getElementById("entities").value),
+    };
+    const resp = await fetch("/classify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    renderResult(data, performance.now() - t0);
+  } catch (e) {
+    renderResult({ error: String(e) }, performance.now() - t0);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Send";
+  }
+};
+
+document.getElementById("resetBtn").onclick = () => {
+  document.getElementById("transcript").value =
+`Alex: What should we grab from the store?
+Sam: Whatever works.
+Alex: I'll pick up some peanut snacks.`;
+  document.getElementById("memory").value = "";
+  document.getElementById("entities").value =
+`Sam | friend | severe nut allergy; prefers Thai without peanuts
+Alex | self | shopping`;
+  tools = [...VALID_TOOLS];
+  renderTools();
+};
+
+document.getElementById("clearBtn").onclick = () => {
+  document.getElementById("transcript").value = "";
+  document.getElementById("memory").value = "";
+  document.getElementById("entities").value = "";
+  document.getElementById("result").innerHTML = "";
+};
+
+renderTools();
+// Pre-fill with the README's classic example so first click is informative.
+document.getElementById("resetBtn").click();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reflections"
+version = "0.1.0"
+description = "MentraOS Reflections — camera streaming, transcription, and proactive assistant"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff", "black", "mypy"]
+
+[tool.setuptools.packages.find]
+where = ["packages", "."]
+include = ["stream*", "proactivity*", "third_party*", "reflections*", "apps*"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["packages/third_party"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["SIM105", "B024", "B027", "B905", "B023", "SIM117"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+extend-exclude = "packages/third_party/"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["packages"]

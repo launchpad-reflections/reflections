@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>proactivity · live</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel2: #1c232c;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --classifier: #58a6ff;
+    --claude: #d2a8ff;
+    --tool: #7ee787;
+    --decision: #ffa657;
+    --memory: #e3b341;
+    --error: #f85149;
+    --accent: #f0883e;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 13px; line-height: 1.5;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 10px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  header h1 {
+    margin: 0; font-size: 14px; font-weight: 600;
+  }
+  header .spacer { flex: 1; }
+  header button, header label {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit;
+  }
+  header button:hover { background: #2a313c; }
+  header button.on { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+  header .status { font-size: 11px; color: var(--muted); }
+  header .status.live::before {
+    content: "●"; color: #3fb950; margin-right: 4px;
+  }
+  header .filters { display: flex; gap: 6px; }
+  header .filters label {
+    display: inline-flex; align-items: center; gap: 4px;
+    user-select: none;
+  }
+  header input[type=checkbox] { accent-color: var(--accent); }
+  #search {
+    background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 10px; font-size: 12px; width: 200px;
+    font-family: inherit;
+  }
+  main {
+    max-width: 1100px; margin: 0 auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-left: 3px solid var(--border); border-radius: 6px;
+    overflow: hidden;
+  }
+  .card.classifier { border-left-color: var(--classifier); }
+  .card.claude { border-left-color: var(--claude); }
+  .card.tool { border-left-color: var(--tool); }
+  .card.decision { border-left-color: var(--decision); }
+  .card.memory { border-left-color: var(--memory); }
+  .card.error { border-left-color: var(--error); }
+  .card-head {
+    padding: 8px 12px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none;
+  }
+  .card-head:hover { background: var(--panel2); }
+  .badge {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;
+  }
+  .badge.classifier { background: rgba(88,166,255,0.15); color: var(--classifier); }
+  .badge.claude { background: rgba(210,168,255,0.15); color: var(--claude); }
+  .badge.tool { background: rgba(126,231,135,0.15); color: var(--tool); }
+  .badge.decision { background: rgba(255,166,87,0.15); color: var(--decision); }
+  .badge.memory { background: rgba(227,179,65,0.15); color: var(--memory); }
+  .badge.error { background: rgba(248,81,73,0.15); color: var(--error); }
+  .ts { font-size: 11px; color: var(--muted); font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .summary { flex: 1; color: var(--muted); font-size: 12px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .summary strong { color: var(--text); font-weight: 500; }
+  .chev { font-size: 10px; color: var(--muted); transition: transform 0.15s; }
+  .card.open .chev { transform: rotate(90deg); }
+  .card-body { display: none; padding: 0 12px 12px; }
+  .card.open .card-body { display: block; }
+  .section-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); margin: 10px 0 4px; font-weight: 600;
+  }
+  pre {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 10px; margin: 0;
+    white-space: pre-wrap; word-break: break-word;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11.5px; line-height: 1.45;
+    max-height: 480px; overflow: auto;
+  }
+  pre.system { color: #c9d1d9; }
+  pre.user { color: #79c0ff; }
+  .pbar {
+    height: 14px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; position: relative; margin: 6px 0; overflow: hidden;
+  }
+  .pbar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--classifier), var(--claude));
+  }
+  .pbar .threshold {
+    position: absolute; top: -2px; bottom: -2px; width: 2px;
+    background: var(--accent);
+  }
+  .pbar-row {
+    display: flex; align-items: center; gap: 10px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+  }
+  .pbar-row .pbar { flex: 1; }
+  .kv { display: flex; gap: 8px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; }
+  .kv .k { color: var(--muted); min-width: 90px; }
+  .kv .v { color: var(--text); }
+  .empty {
+    text-align: center; color: var(--muted); padding: 60px 20px;
+    font-size: 13px;
+  }
+  .empty code { background: var(--panel2); padding: 2px 6px; border-radius: 3px; }
+  /* highlighted ChatML markers in classifier prompts */
+  .chatml-tag { color: #ffa657; font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>proactivity · live</h1>
+  <div class="filters">
+    <label><input type="checkbox" data-cat="classifier" checked /> classifier</label>
+    <label><input type="checkbox" data-cat="claude" checked /> claude</label>
+    <label><input type="checkbox" data-cat="tool" checked /> tools</label>
+    <label><input type="checkbox" data-cat="memory" checked /> memory</label>
+  </div>
+  <input id="search" type="text" placeholder="filter (substring)…" />
+  <div class="spacer"></div>
+  <button id="autoscroll" class="on">auto-scroll</button>
+  <button id="pause">pause</button>
+  <button id="clear">clear</button>
+  <span id="status" class="status">connecting…</span>
+</header>
+<main id="events">
+  <div class="empty">
+    Waiting for events. Run <code>python -m apps.viewer</code> or <code>python -m proactivity.cli</code> in another terminal.
+  </div>
+</main>
+<script>
+const $ = (sel) => document.querySelector(sel);
+const eventsEl = $('#events');
+const statusEl = $('#status');
+const searchEl = $('#search');
+const pauseBtn = $('#pause');
+const clearBtn = $('#clear');
+const autoscrollBtn = $('#autoscroll');
+const filterEls = document.querySelectorAll('header .filters input');
+
+let renderedSeq = 0;
+let paused = false;
+let autoscroll = true;
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+function highlightChatml(s) {
+  return escapeHtml(s).replace(
+    /(&lt;\|im_(start|end)\|&gt;|&lt;\/?(?:label|signal|reasoning|entities|transcript|memory|tools|location)&gt;)/g,
+    '<span class="chatml-tag">$1</span>'
+  );
+}
+
+function fmtTime(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-US', { hour12: false }) +
+           '.' + String(d.getMilliseconds()).padStart(3, '0');
+  } catch { return iso; }
+}
+
+function pre(content, cls) {
+  const c = cls ? ` class="${cls}"` : '';
+  return `<pre${c}>${escapeHtml(content)}</pre>`;
+}
+
+function preHL(content) {
+  return `<pre>${highlightChatml(content)}</pre>`;
+}
+
+function summaryFor(ev) {
+  if (ev.category === 'classifier' && ev.stage === 'prompt') {
+    const tools = (ev.tools || []).join(', ');
+    return `<strong>prompt</strong> · target: "${escapeHtml(ev.target || '')}" · tools: ${escapeHtml(tools || '∅')}`;
+  }
+  if (ev.category === 'classifier' && ev.stage === 'result') {
+    return `<strong>result</strong> · P=${ev.p.toFixed(3)} · raw model output (gate decision is separate)`;
+  }
+  if (ev.category === 'classifier' && ev.stage === 'gate') {
+    const verdict = ev.passed ? 'PASS → Claude' : 'BLOCK';
+    return `<strong>gate</strong> · P=${ev.p.toFixed(3)} · ${verdict} (threshold=${ev.threshold})`;
+  }
+  if (ev.category === 'claude' && ev.stage === 'request') {
+    const tools = (ev.tools || []).map(t => t.name).join(', ');
+    return `<strong>request</strong> · model=${escapeHtml(ev.model || '')} · tools: ${escapeHtml(tools)}`;
+  }
+  if (ev.category === 'claude' && ev.stage === 'response') {
+    const types = (ev.content || []).map(b => b.type).join(', ');
+    return `<strong>response</strong> · stop=${escapeHtml(ev.stop_reason || '?')} · blocks: ${escapeHtml(types)}`;
+  }
+  if (ev.category === 'claude' && ev.stage === 'decision') {
+    const verb = ev.speak ? 'SPEAK' : 'silent';
+    const txt = ev.speak ? ` → "${escapeHtml((ev.text || '').slice(0, 80))}"` : '';
+    return `<strong>${verb}</strong>${txt} · reason: ${escapeHtml(ev.reason || '')}`;
+  }
+  if (ev.category === 'claude' && ev.stage === 'error') {
+    return `<strong>error</strong> · ${escapeHtml(ev.error || '')}`;
+  }
+  if (ev.category === 'tool' && ev.stage === 'call') {
+    return `<strong>${escapeHtml(ev.name)}</strong> ← ${escapeHtml(JSON.stringify(ev.input || {}))}`;
+  }
+  if (ev.category === 'tool' && ev.stage === 'result') {
+    return `<strong>${escapeHtml(ev.name)}</strong> → ${escapeHtml((ev.output || '').slice(0, 120))}`;
+  }
+  if (ev.category === 'memory' && ev.stage === 'request') {
+    return `<strong>snapshot</strong> · ${ev.unsent_lines} new line${ev.unsent_lines === 1 ? '' : 's'} → Haiku · current memory: ${ev.current_size} chars`;
+  }
+  if (ev.category === 'memory' && ev.stage === 'response') {
+    const sign = ev.delta > 0 ? '+' : '';
+    return `<strong>updated</strong> · ${ev.new_size} chars (${sign}${ev.delta}) · ${ev.ms?.toFixed(0) ?? '?'}ms`;
+  }
+  if (ev.category === 'memory' && ev.stage === 'skip') {
+    return `<strong>noop</strong> · ${escapeHtml(ev.reason || 'skip')}`;
+  }
+  if (ev.category === 'memory' && ev.stage === 'error') {
+    return `<strong>error</strong> · ${escapeHtml(ev.error || '')}`;
+  }
+  return `${ev.category} · ${ev.stage}`;
+}
+
+function bodyFor(ev) {
+  if (ev.category === 'classifier' && ev.stage === 'prompt') {
+    const turns = (ev.transcript || []).map(t =>
+      `[${t.speaker}]: ${t.text}${t.is_target ? '  ← TARGET' : ''}`
+    ).join('\n');
+    return `
+      <div class="section-label">transcript turns</div>
+      ${pre(turns)}
+      <div class="section-label">tools available to classifier</div>
+      ${pre((ev.tools || []).join('\n'))}
+      <div class="section-label">rendered prompt (sent to qwen)</div>
+      ${preHL(ev.prompt || '')}
+    `;
+  }
+  if (ev.category === 'classifier' && ev.stage === 'result') {
+    const pct = (ev.p * 100).toFixed(1);
+    const fillW = Math.max(1, Math.min(100, ev.p * 100));
+    return `
+      <div class="pbar-row">
+        <span style="min-width:80px">P=${ev.p.toFixed(4)}</span>
+        <div class="pbar">
+          <div class="fill" style="width:${fillW}%"></div>
+        </div>
+        <span style="min-width:60px">${pct}%</span>
+      </div>
+      <div class="kv"><span class="k">label</span><span class="v">${ev.label} (informational, against reasoning_trigger=${ev.reasoning_trigger ?? '0.45'})</span></div>
+      <div class="kv"><span class="k">mode</span><span class="v">${ev.mode}</span></div>
+      <div class="kv"><span class="k">note</span><span class="v">live gate fires next as classifier/gate (uses agent threshold)</span></div>
+    `;
+  }
+  if (ev.category === 'classifier' && ev.stage === 'gate') {
+    const pct = (ev.p * 100).toFixed(1);
+    const fillW = Math.max(1, Math.min(100, ev.p * 100));
+    const thrLeft = Math.max(0, Math.min(100, ev.threshold * 100));
+    return `
+      <div class="pbar-row">
+        <span style="min-width:80px">P=${ev.p.toFixed(4)}</span>
+        <div class="pbar">
+          <div class="fill" style="width:${fillW}%"></div>
+          <div class="threshold" style="left:${thrLeft}%"></div>
+        </div>
+        <span style="min-width:60px">${pct}%</span>
+      </div>
+      <div class="kv"><span class="k">threshold</span><span class="v">${ev.threshold} (GLASSES_GATE_THRESHOLD)</span></div>
+      <div class="kv"><span class="k">decision</span><span class="v">${ev.passed ? 'PASS → continues to Claude' : 'BLOCK → silent'}</span></div>
+      <div class="kv"><span class="k">classify_ms</span><span class="v">${ev.classify_ms?.toFixed(0) ?? '?'}</span></div>
+    `;
+  }
+  if (ev.category === 'claude' && ev.stage === 'request') {
+    const tools = (ev.tools || []).map(t =>
+      `${t.name}${t.type ? '  (' + t.type + ')' : ''}`
+    ).join('\n');
+    return `
+      <div class="section-label">system prompt</div>
+      ${pre(ev.system || '', 'system')}
+      <div class="section-label">user message</div>
+      ${pre(ev.user || '', 'user')}
+      <div class="section-label">tools attached</div>
+      ${pre(tools)}
+      <div class="kv"><span class="k">model</span><span class="v">${escapeHtml(ev.model || '')}</span></div>
+      <div class="kv"><span class="k">classifier P</span><span class="v">${ev.classifier_p?.toFixed(3) ?? '?'}</span></div>
+    `;
+  }
+  if (ev.category === 'claude' && ev.stage === 'response') {
+    const blocks = (ev.content || []).map(b => {
+      let body = '';
+      if (b.type === 'text') body = b.text || '';
+      else if (b.type === 'tool_use' || b.type === 'server_tool_use') {
+        body = `name: ${b.name}\ninput: ${JSON.stringify(b.input || {}, null, 2)}`;
+      } else if (b.type === 'web_search_tool_result') {
+        body = JSON.stringify(b.content || b, null, 2);
+      } else {
+        body = JSON.stringify(b, null, 2);
+      }
+      return `── ${b.type} ──\n${body}`;
+    }).join('\n\n');
+    return `
+      <div class="kv"><span class="k">stop_reason</span><span class="v">${escapeHtml(ev.stop_reason || '?')}</span></div>
+      ${ev.usage ? `<div class="kv"><span class="k">usage</span><span class="v">${escapeHtml(JSON.stringify(ev.usage))}</span></div>` : ''}
+      <div class="section-label">content blocks</div>
+      ${pre(blocks)}
+    `;
+  }
+  if (ev.category === 'claude' && ev.stage === 'decision') {
+    return `
+      <div class="kv"><span class="k">speak</span><span class="v">${ev.speak}</span></div>
+      <div class="kv"><span class="k">reason</span><span class="v">${escapeHtml(ev.reason || '')}</span></div>
+      ${ev.speak ? `<div class="section-label">text</div>${pre(ev.text || '')}` : ''}
+      ${(ev.tool_names || []).length ? `<div class="section-label">tools used</div>${pre((ev.tool_names || []).join('\n'))}` : ''}
+    `;
+  }
+  if (ev.category === 'claude' && ev.stage === 'error') {
+    return pre(ev.error || '');
+  }
+  if (ev.category === 'tool' && (ev.stage === 'call' || ev.stage === 'result')) {
+    return `
+      <div class="kv"><span class="k">name</span><span class="v">${escapeHtml(ev.name)}</span></div>
+      ${ev.input !== undefined ? `<div class="section-label">input</div>${pre(JSON.stringify(ev.input, null, 2))}` : ''}
+      ${ev.output !== undefined ? `<div class="section-label">output</div>${pre(ev.output)}` : ''}
+    `;
+  }
+  if (ev.category === 'memory' && ev.stage === 'request') {
+    return `
+      <div class="kv"><span class="k">unsent lines</span><span class="v">${ev.unsent_lines}</span></div>
+      <div class="kv"><span class="k">current size</span><span class="v">${ev.current_size} chars</span></div>
+      <div class="kv"><span class="k">model</span><span class="v">${escapeHtml(ev.model || '')}</span></div>
+      <div class="section-label">unsent transcript chunk (sent to Haiku)</div>
+      ${pre(ev.chunk || '')}
+      <div class="section-label">current memory.md (sent to Haiku as context)</div>
+      ${pre(ev.current_memory || '(empty — fresh memory file)')}
+    `;
+  }
+  if (ev.category === 'memory' && ev.stage === 'response') {
+    const sign = ev.delta > 0 ? '+' : '';
+    return `
+      <div class="kv"><span class="k">new size</span><span class="v">${ev.new_size} chars (${sign}${ev.delta})</span></div>
+      <div class="kv"><span class="k">unsent lines absorbed</span><span class="v">${ev.unsent_lines}</span></div>
+      <div class="kv"><span class="k">claude_ms</span><span class="v">${ev.ms?.toFixed(0) ?? '?'}</span></div>
+      <div class="section-label">new memory.md (Haiku's response, written to disk)</div>
+      ${pre(ev.new_memory || '')}
+    `;
+  }
+  if (ev.category === 'memory' && ev.stage === 'skip') {
+    return `<div class="kv"><span class="k">reason</span><span class="v">${escapeHtml(ev.reason || '')}</span></div>`;
+  }
+  if (ev.category === 'memory' && ev.stage === 'error') {
+    return `
+      <div class="kv"><span class="k">error</span><span class="v">${escapeHtml(ev.error || '')}</span></div>
+      <div class="kv"><span class="k">ms</span><span class="v">${ev.ms?.toFixed(0) ?? '?'}</span></div>
+    `;
+  }
+  return pre(JSON.stringify(ev, null, 2));
+}
+
+function passesFilters(ev) {
+  const cb = document.querySelector(`header .filters input[data-cat="${ev.category}"]`);
+  if (cb && !cb.checked) return false;
+  const q = searchEl.value.trim().toLowerCase();
+  if (!q) return true;
+  return JSON.stringify(ev).toLowerCase().includes(q);
+}
+
+function render(events) {
+  // Remove the placeholder if present.
+  const empty = eventsEl.querySelector('.empty');
+  if (empty && events.length) empty.remove();
+
+  for (const ev of events) {
+    const card = document.createElement('div');
+    card.className = `card ${ev.category}`;
+    card.dataset.seq = ev.seq;
+    card.dataset.category = ev.category;
+    card.dataset.stage = ev.stage;
+    card.dataset.raw = JSON.stringify(ev);
+    if (!passesFilters(ev)) card.style.display = 'none';
+    card.innerHTML = `
+      <div class="card-head">
+        <span class="ts">${fmtTime(ev.ts)}</span>
+        <span class="badge ${ev.category}">${ev.category}/${ev.stage}</span>
+        <span class="summary">${summaryFor(ev)}</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="card-body">${bodyFor(ev)}</div>
+    `;
+    card.querySelector('.card-head').addEventListener('click', () => {
+      card.classList.toggle('open');
+    });
+    eventsEl.appendChild(card);
+  }
+  if (autoscroll && events.length) {
+    window.scrollTo({ top: document.body.scrollHeight });
+  }
+}
+
+function applyFilters() {
+  for (const card of eventsEl.querySelectorAll('.card')) {
+    const ev = JSON.parse(card.dataset.raw);
+    card.style.display = passesFilters(ev) ? '' : 'none';
+  }
+}
+
+async function tick() {
+  if (paused) return;
+  try {
+    const r = await fetch('/proactivity_prompts.jsonl', { cache: 'no-store' });
+    if (!r.ok) {
+      statusEl.textContent = `error: ${r.status}`;
+      statusEl.classList.remove('live');
+      return;
+    }
+    const text = await r.text();
+    const lines = text.split('\n').filter(Boolean);
+    const newEvents = [];
+    for (const line of lines) {
+      try {
+        const ev = JSON.parse(line);
+        if (ev.seq > renderedSeq) {
+          newEvents.push(ev);
+          renderedSeq = ev.seq;
+        }
+      } catch {}
+    }
+    if (newEvents.length) render(newEvents);
+    statusEl.textContent = `${renderedSeq} events`;
+    statusEl.classList.add('live');
+  } catch (e) {
+    statusEl.textContent = `disconnected`;
+    statusEl.classList.remove('live');
+  }
+}
+
+pauseBtn.addEventListener('click', () => {
+  paused = !paused;
+  pauseBtn.textContent = paused ? 'resume' : 'pause';
+  pauseBtn.classList.toggle('on', paused);
+});
+clearBtn.addEventListener('click', async () => {
+  await fetch('/reset', { method: 'POST' }).catch(() => {});
+  eventsEl.innerHTML = '<div class="empty">cleared. waiting for new events…</div>';
+  renderedSeq = 0;
+});
+autoscrollBtn.addEventListener('click', () => {
+  autoscroll = !autoscroll;
+  autoscrollBtn.classList.toggle('on', autoscroll);
+});
+searchEl.addEventListener('input', applyFilters);
+filterEls.forEach(el => el.addEventListener('change', applyFilters));
+
+setInterval(tick, 500);
+tick();
+</script>
+</body>
+</html>
